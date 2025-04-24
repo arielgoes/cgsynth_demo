@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
+            max-width: 5000px;
             margin: 0 auto;
             padding: 20px;
             line-height: 1.6;
@@ -77,6 +77,58 @@
         .star.selected {
             color: #ffd700;
         }
+        .additional-questions {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .question-box {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .question-box:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .question-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .option-btn {
+            padding: 8px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .option-btn:hover {
+            background-color: #f0f0f0;
+        }
+        .option-btn.selected {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #3e8e41;
+        }
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .checkbox-option input {
+            margin-right: 8px;
+        }
         button {
             padding: 10px 20px;
             background-color: #4CAF50;
@@ -99,6 +151,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             resize: vertical;
+            min-height: 80px;
         }
         .thank-you {
             display: none;
@@ -113,6 +166,29 @@
             font-size: 16px;
             color: #666;
         }
+        .required-indicator {
+            color: #f44336;
+            margin-left: 3px;
+        }
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -126,7 +202,11 @@
         <p>Your unique participant ID is:</p>
         <div class="user-id-display" id="userIdDisplay">GENERATING...</div>
         <p>Please note this ID for your records. You'll need it if you want to reference your evaluation later.</p>
-        <button id="startButton">Start Evaluation</button>
+        <div id="loadingVideos" class="loading-indicator">
+            <div class="loading-spinner"></div>
+            <p>Loading video pairs...</p>
+        </div>
+        <button id="startButton" disabled>Start Evaluation</button>
     </div>
 
     <div class="evaluation-section" id="evaluationSection">
@@ -167,7 +247,92 @@
             </div>
         </div>
         
-        <button id="submitButton" disabled>Submit Ratings</button>
+        <!-- Additional Questions Section -->
+        <div class="additional-questions">
+            <h3>Additional Questions</h3>
+            
+            <!-- Question 1 -->
+            <div class="question-box">
+                <div class="question-title">
+                    1. Which videos do you think are real? <span class="required-indicator">*</span>
+                </div>
+                <div class="options-grid" id="realVideoOptions">
+                    <div class="option-btn" data-value="none">None</div>
+                    <div class="option-btn" data-value="both">Both</div>
+                    <div class="option-btn" data-value="a">Video A</div>
+                    <div class="option-btn" data-value="b">Video B</div>
+                </div>
+            </div>
+            
+            <!-- Question 2 -->
+            <div class="question-box">
+                <div class="question-title">
+                    2. If you think there is a synthetic video, do you think a real gameplay would be affected visually? <span class="required-indicator">*</span>
+                </div>
+                <p>Would the player might be disturbed somehow (distractions, uncanny visuals, odd behavior)?</p>
+                <div class="options-grid" id="gameplayAffectedOptions">
+                    <div class="option-btn" data-value="yes">Yes</div>
+                    <div class="option-btn" data-value="no">No</div>
+                    <div class="option-btn" data-value="maybe">Maybe</div>
+                    <div class="option-btn" data-value="not-applicable">N/A</div>
+                </div>
+            </div>
+            
+            <!-- Question 3 -->
+            <div class="question-box">
+                <div class="question-title">
+                    3. If a game used synthetic assets during gameplay (e.g., AI-generated replays, cutscenes, or effects), would you prefer to be informed? <span class="required-indicator">*</span>
+                </div>
+                <div class="options-grid" id="informPreferenceOptions">
+                    <div class="option-btn" data-value="yes">Yes</div>
+                    <div class="option-btn" data-value="no">No</div>
+                    <div class="option-btn" data-value="does-not-matter">Does not matter</div>
+                </div>
+            </div>
+            
+            <!-- Question 4 -->
+            <div class="question-box">
+                <div class="question-title">
+                    4. What visual cues (if any) helped you decide which video might be synthetic? <span class="required-indicator">*</span>
+                </div>
+                <div class="checkbox-options" id="visualCuesOptions">
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="lighting" name="visualCues" value="lighting">
+                        <label for="lighting">Lighting</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="animation" name="visualCues" value="animation">
+                        <label for="animation">Animation smoothness</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="background" name="visualCues" value="background">
+                        <label for="background">Background details</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="movement" name="visualCues" value="movement">
+                        <label for="movement">Player movement</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="textures" name="visualCues" value="textures">
+                        <label for="textures">Textures</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="artifacts" name="visualCues" value="artifacts">
+                        <label for="artifacts">Visual artifacts</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="none" name="visualCues" value="none">
+                        <label for="none">None / Couldn't tell</label>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label for="otherCues">Other cues (please specify):</label>
+                    <textarea id="otherCues" placeholder="Enter any other visual cues you noticed..."></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <button id="submitButton" disabled>Submit Evaluation</button>
     </div>
 
     <div class="thank-you" id="thankYouSection">
@@ -177,22 +342,21 @@
     </div>
 
     <script>
-        // Configuration 
-        const videoPairs = [
-            {real: "videos/original_video.mp4", synth: "videos/interpolated_video_addWeighted.mp4"},
-            {real: "videos/original_video_1280_720.mp4", synth: "videos/interpolated_video_film.mp4"},
-            // Add more pairs as needed
-        ];
-        
-        // Google Sheet script URL (you'll need to replace this with your actual script URL)
-        const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec";
-        
         // Variables
-        let currentPairIndex = 0;
         let userId = generateRandomUserId(10);
+        let currentPairIndex = 0;
         let ratingA = 0;
         let ratingB = 0;
         let resultsData = [];
+        let videoFilesCache = null;
+        let videoPairs = [];
+        
+        // Additional question responses
+        let realVideoSelection = '';
+        let gameplayAffectedSelection = '';
+        let informPreferenceSelection = '';
+        let visualCuesSelections = [];
+        let otherCuesText = '';
         
         // DOM Elements
         const welcomeSection = document.getElementById("welcomeSection");
@@ -210,10 +374,24 @@
         const commentB = document.getElementById("commentB");
         const starsA = document.getElementById("starsA");
         const starsB = document.getElementById("starsB");
+        const otherCues = document.getElementById("otherCues");
+        const loadingIndicator = document.getElementById("loadingVideos");
+        
+        // Additional question elements
+        const realVideoOptions = document.getElementById("realVideoOptions");
+        const gameplayAffectedOptions = document.getElementById("gameplayAffectedOptions");
+        const informPreferenceOptions = document.getElementById("informPreferenceOptions");
+        const visualCuesOptions = document.getElementById("visualCuesOptions");
+        
+        // Google Sheet script URL (you'll need to replace this with your actual script URL)
+        const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec";
         
         // Display the generated user ID
         userIdDisplay.textContent = userId;
         thankYouUserId.textContent = userId;
+        
+        // Initialize the application
+        initApplication();
         
         // Event Listeners
         startButton.addEventListener("click", startEvaluation);
@@ -230,7 +408,147 @@
             checkSubmitButton();
         });
         
+        // Setup option buttons for radio-like behavior
+        setupOptionButtons(realVideoOptions, (value) => {
+            realVideoSelection = value;
+            checkSubmitButton();
+        });
+        
+        setupOptionButtons(gameplayAffectedOptions, (value) => {
+            gameplayAffectedSelection = value;
+            checkSubmitButton();
+        });
+        
+        setupOptionButtons(informPreferenceOptions, (value) => {
+            informPreferenceSelection = value;
+            checkSubmitButton();
+        });
+        
+        // Setup checkbox behavior
+        setupCheckboxes();
+        
         // Functions
+        function initApplication() {
+            // Fetch available video files
+            fetchVideoFiles()
+                .then(files => {
+                    videoFilesCache = files;
+                    createVideoPairs();
+                    
+                    // Hide loading indicator and enable start button
+                    loadingIndicator.style.display = "none";
+                    startButton.disabled = false;
+                })
+                .catch(error => {
+                    console.error("Error loading video files:", error);
+                    alert("Failed to load video files. Please refresh the page or contact support.");
+                });
+        }
+        
+        function fetchVideoFiles() {
+            // This is a simulated list of video files that would normally come from a server-side API
+            // In a real implementation, you would call an API endpoint to get the list of available video files
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve([
+                        "videos/scene_01_real.mp4",
+                        "videos/scene_01_interp.mp4",
+                        "videos/scene_02_real.mp4",
+                        "videos/scene_02_interp.mp4",
+                        "videos/scene_03_real.mp4",
+                        "videos/scene_03_interp.mp4",
+                        "videos/scene_04_real.mp4",
+                        "videos/scene_04_interp.mp4",
+                        "videos/scene_05_real.mp4",
+                        "videos/scene_05_interp.mp4",
+                        "videos/scene_06_real.mp4",
+                        "videos/scene_06_interp.mp4",
+                        "videos/scene_07_real.mp4",
+                        "videos/scene_07_interp.mp4"
+                    ]);
+                }, 1000);
+            });
+        }
+        
+        function createVideoPairs() {
+            // Group files by scene
+            const sceneGroups = {};
+            videoFilesCache.forEach(file => {
+                const sceneName = extractSceneName(file);
+                if (!sceneGroups[sceneName]) {
+                    sceneGroups[sceneName] = [];
+                }
+                sceneGroups[sceneName].push(file);
+            });
+            
+            // Create pairs from scene groups
+            const allPairs = [];
+            for (const sceneName in sceneGroups) {
+                const files = sceneGroups[sceneName];
+                if (files.length === 2) {
+                    const realFile = files.find(f => f.includes("_real"));
+                    const interpFile = files.find(f => f.includes("_interp"));
+                    if (realFile && interpFile) {
+                        allPairs.push({
+                            scene: sceneName,
+                            real: realFile,
+                            interp: interpFile
+                        });
+                    }
+                }
+            }
+            
+            // Use a seeded random selection to choose 5 pairs
+            videoPairs = selectRandomPairsWithSeed(allPairs, 5, userId);
+            
+            console.log("Selected video pairs:", videoPairs);
+        }
+        
+        function extractSceneName(filename) {
+            // Extract scene name from filename (e.g., "videos/scene_01_real.mp4" => "scene_01")
+            const match = filename.match(/scene_\d+/);
+            return match ? match[0] : null;
+        }
+        
+        // Seedable random number generator
+        function seededRandom(seed) {
+            let state = hashString(seed);
+            
+            return function() {
+                state = (state * 1664525 + 1013904223) % 4294967296;
+                return state / 4294967296;
+            };
+        }
+        
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+        
+        function selectRandomPairsWithSeed(pairs, count, seed) {
+            // Create a copy of the pairs array
+            const pairsCopy = [...pairs];
+            const selected = [];
+            const random = seededRandom(seed);
+            
+            // Ensure we don't try to select more pairs than available
+            count = Math.min(count, pairsCopy.length);
+            
+            // Select random pairs
+            for (let i = 0; i < count; i++) {
+                const randomIndex = Math.floor(random() * pairsCopy.length);
+                selected.push(pairsCopy[randomIndex]);
+                pairsCopy.splice(randomIndex, 1);
+            }
+            
+            return selected;
+        }
+        
         function generateRandomUserId(length) {
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             let result = '';
@@ -263,6 +581,63 @@
             });
         }
         
+        function setupOptionButtons(container, callback) {
+            const buttons = container.querySelectorAll(".option-btn");
+            
+            buttons.forEach(button => {
+                button.addEventListener("click", function() {
+                    // Deselect all buttons
+                    buttons.forEach(b => b.classList.remove("selected"));
+                    
+                    // Select clicked button
+                    this.classList.add("selected");
+                    
+                    // Call callback with selected value
+                    callback(this.getAttribute("data-value"));
+                });
+            });
+        }
+        
+        function setupCheckboxes() {
+            const checkboxes = document.querySelectorAll('input[name="visualCues"]');
+            const noneCheckbox = document.getElementById("none");
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener("change", function() {
+                    // If "None" is checked, uncheck all others
+                    if (this.id === "none" && this.checked) {
+                        checkboxes.forEach(cb => {
+                            if (cb.id !== "none") {
+                                cb.checked = false;
+                            }
+                        });
+                    }
+                    
+                    // If any other is checked, uncheck "None"
+                    if (this.id !== "none" && this.checked) {
+                        noneCheckbox.checked = false;
+                    }
+                    
+                    // Update visualCuesSelections
+                    updateVisualCuesSelections();
+                    checkSubmitButton();
+                });
+            });
+            
+            otherCues.addEventListener("input", function() {
+                otherCuesText = this.value.trim();
+                checkSubmitButton();
+            });
+        }
+        
+        function updateVisualCuesSelections() {
+            visualCuesSelections = [];
+            const checkboxes = document.querySelectorAll('input[name="visualCues"]:checked');
+            checkboxes.forEach(cb => {
+                visualCuesSelections.push(cb.value);
+            });
+        }
+        
         function startEvaluation() {
             welcomeSection.style.display = "none";
             evaluationSection.style.display = "block";
@@ -281,64 +656,92 @@
             
             // Get current video pair
             const currentPair = videoPairs[currentPairIndex];
-            const sceneName = currentPair.real.split('_real')[0];
             
             // Set scene title
-            sceneTitle.textContent = `Evaluate ${sceneName}`;
+            sceneTitle.textContent = `Evaluate ${currentPair.scene}`;
             
-            // Randomize which video is A and which is B
-            const isARealVideo = Math.random() >= 0.5;
+            // Generate a reproducible random choice for A/B placement based on userId and scene
+            const random = seededRandom(userId + currentPair.scene);
+            const isARealVideo = random() >= 0.5;
             
-            // Set video sources
-            videoA.src = isARealVideo ? currentPair.real : currentPair.synth;
-            videoB.src = isARealVideo ? currentPair.synth : currentPair.real;
+            // Set video sources with fallback content
+            videoA.innerHTML = `<source src="${isARealVideo ? currentPair.real : currentPair.interp}" type="video/mp4">
+                               Your browser does not support the video tag or the file cannot be loaded.`;
+            videoB.innerHTML = `<source src="${isARealVideo ? currentPair.interp : currentPair.real}" type="video/mp4">
+                               Your browser does not support the video tag or the file cannot be loaded.`;
             
             // Store which video is real for data collection
             videoA.dataset.isReal = isARealVideo;
             videoB.dataset.isReal = !isARealVideo;
-            videoA.dataset.filename = isARealVideo ? currentPair.real : currentPair.synth;
-            videoB.dataset.filename = isARealVideo ? currentPair.synth : currentPair.real;
+            videoA.dataset.filename = isARealVideo ? currentPair.real : currentPair.interp;
+            videoB.dataset.filename = isARealVideo ? currentPair.interp : currentPair.real;
             
             // Reset ratings and comments
-            resetRatings();
+            resetEvaluation();
             
             // Load videos
             videoA.load();
             videoB.load();
         }
         
-        function resetRatings() {
+        function resetEvaluation() {
             // Reset star ratings
             document.querySelectorAll(".star").forEach(star => {
                 star.classList.remove("selected");
             });
             
-            // Reset comment fields
+            // Reset option buttons
+            document.querySelectorAll(".option-btn").forEach(btn => {
+                btn.classList.remove("selected");
+            });
+            
+            // Reset checkboxes
+            document.querySelectorAll('input[name="visualCues"]').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            // Reset text fields
             commentA.value = "";
             commentB.value = "";
+            otherCues.value = "";
             
-            // Reset rating values
+            // Reset values
             ratingA = 0;
             ratingB = 0;
+            realVideoSelection = '';
+            gameplayAffectedSelection = '';
+            informPreferenceSelection = '';
+            visualCuesSelections = [];
+            otherCuesText = '';
             
             // Disable submit button
             submitButton.disabled = true;
         }
         
         function checkSubmitButton() {
-            // Enable submit button only when both videos have been rated
-            submitButton.disabled = !(ratingA > 0 && ratingB > 0);
+            // Check if all required fields are filled
+            const hasVideoRatings = ratingA > 0 && ratingB > 0;
+            const hasRealVideoSelection = realVideoSelection !== '';
+            const hasGameplayAffectedSelection = gameplayAffectedSelection !== '';
+            const hasInformPreferenceSelection = informPreferenceSelection !== '';
+            const hasVisualCues = visualCuesSelections.length > 0;
+            
+            // Enable submit button only when all required fields are filled
+            submitButton.disabled = !(hasVideoRatings && 
+                                     hasRealVideoSelection && 
+                                     hasGameplayAffectedSelection && 
+                                     hasInformPreferenceSelection && 
+                                     hasVisualCues);
         }
         
         function submitRatings() {
-            // Get current scene name
+            // Get current scene information
             const currentPair = videoPairs[currentPairIndex];
-            const sceneName = currentPair.real.split('_real')[0];
             
             // Collect data
             const resultData = {
                 user_id: userId,
-                scene: sceneName,
+                scene: currentPair.scene,
                 video_A_filename: videoA.dataset.filename,
                 video_B_filename: videoB.dataset.filename,
                 A_score: ratingA,
@@ -347,6 +750,12 @@
                 B_comment: commentB.value.trim() || "N/A",
                 video_A_is_real: videoA.dataset.isReal === "true",
                 video_B_is_real: videoB.dataset.isReal === "true",
+                // Additional question responses
+                which_video_real: realVideoSelection,
+                gameplay_affected: gameplayAffectedSelection,
+                inform_preference: informPreferenceSelection,
+                visual_cues: visualCuesSelections.join(", "),
+                other_cues: otherCuesText || "N/A",
                 timestamp: new Date().toISOString()
             };
             
