@@ -179,8 +179,8 @@
     <script>
         // Configuration 
         const videoPairs = [
-            {real: "scene_01_real.mp4", interp: "scene_01_interp.mp4"},
-            {real: "scene_02_real.mp4", interp: "scene_02_interp.mp4"},
+            {real: "original_video.mp4", synth: "interpolated_video_addWeighted.mp4"},
+            {real: "original_video_1280_720.mp4", synth: "interpolated_video_film.mp4"},
             // Add more pairs as needed
         ];
         
@@ -290,14 +290,14 @@
             const isARealVideo = Math.random() >= 0.5;
             
             // Set video sources
-            videoA.src = isARealVideo ? currentPair.real : currentPair.interp;
-            videoB.src = isARealVideo ? currentPair.interp : currentPair.real;
+            videoA.src = isARealVideo ? currentPair.real : currentPair.synth;
+            videoB.src = isARealVideo ? currentPair.synth : currentPair.real;
             
             // Store which video is real for data collection
             videoA.dataset.isReal = isARealVideo;
             videoB.dataset.isReal = !isARealVideo;
-            videoA.dataset.filename = isARealVideo ? currentPair.real : currentPair.interp;
-            videoB.dataset.filename = isARealVideo ? currentPair.interp : currentPair.real;
+            videoA.dataset.filename = isARealVideo ? currentPair.real : currentPair.synth;
+            videoB.dataset.filename = isARealVideo ? currentPair.synth : currentPair.real;
             
             // Reset ratings and comments
             resetRatings();
