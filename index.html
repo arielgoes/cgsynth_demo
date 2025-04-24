@@ -16,11 +16,22 @@
             text-align: center;
             margin-bottom: 30px;
         }
-        .user-id-section {
+        .welcome-section {
             margin-bottom: 30px;
             padding: 20px;
             border: 1px solid #ddd;
             border-radius: 8px;
+            text-align: center;
+        }
+        .user-id-display {
+            font-family: monospace;
+            font-size: 18px;
+            padding: 8px 16px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 10px 0;
+            border: 1px solid #ddd;
         }
         .evaluation-section {
             display: none;
@@ -89,12 +100,6 @@
             border-radius: 4px;
             resize: vertical;
         }
-        input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
         .thank-you {
             display: none;
             text-align: center;
@@ -116,10 +121,11 @@
         <p>Please evaluate the visual quality of each video pair using a 1-5 scale</p>
     </div>
 
-    <div class="user-id-section" id="userIdSection">
-        <h2>Enter User ID</h2>
-        <input type="text" id="userId" placeholder="Your User ID">
-        <p id="userIdError" style="color: red; display: none;">Please enter a user ID</p>
+    <div class="welcome-section" id="welcomeSection">
+        <h2>Welcome to the Video Quality Evaluation</h2>
+        <p>Your unique participant ID is:</p>
+        <div class="user-id-display" id="userIdDisplay">GENERATING...</div>
+        <p>Please note this ID for your records. You'll need it if you want to reference your evaluation later.</p>
         <button id="startButton">Start Evaluation</button>
     </div>
 
@@ -167,6 +173,7 @@
     <div class="thank-you" id="thankYouSection">
         <h2>Thank You!</h2>
         <p>Your evaluation has been successfully recorded.</p>
+        <p>Your participant ID: <span id="thankYouUserId"></span></p>
     </div>
 
     <script>
@@ -182,17 +189,17 @@
         
         // Variables
         let currentPairIndex = 0;
-        let userId = "";
+        let userId = generateRandomUserId(10);
         let ratingA = 0;
         let ratingB = 0;
         let resultsData = [];
         
         // DOM Elements
-        const userIdSection = document.getElementById("userIdSection");
+        const welcomeSection = document.getElementById("welcomeSection");
         const evaluationSection = document.getElementById("evaluationSection");
         const thankYouSection = document.getElementById("thankYouSection");
-        const userIdInput = document.getElementById("userId");
-        const userIdError = document.getElementById("userIdError");
+        const userIdDisplay = document.getElementById("userIdDisplay");
+        const thankYouUserId = document.getElementById("thankYouUserId");
         const startButton = document.getElementById("startButton");
         const submitButton = document.getElementById("submitButton");
         const progressIndicator = document.getElementById("progress");
@@ -203,6 +210,10 @@
         const commentB = document.getElementById("commentB");
         const starsA = document.getElementById("starsA");
         const starsB = document.getElementById("starsB");
+        
+        // Display the generated user ID
+        userIdDisplay.textContent = userId;
+        thankYouUserId.textContent = userId;
         
         // Event Listeners
         startButton.addEventListener("click", startEvaluation);
@@ -220,6 +231,15 @@
         });
         
         // Functions
+        function generateRandomUserId(length) {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+        
         function setupStarRating(container, callback) {
             const stars = container.querySelectorAll(".star");
             
@@ -244,14 +264,7 @@
         }
         
         function startEvaluation() {
-            userId = userIdInput.value.trim();
-            
-            if (!userId) {
-                userIdError.style.display = "block";
-                return;
-            }
-            
-            userIdSection.style.display = "none";
+            welcomeSection.style.display = "none";
             evaluationSection.style.display = "block";
             
             loadCurrentPair();
