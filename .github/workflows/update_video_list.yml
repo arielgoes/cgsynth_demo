@@ -1,5 +1,9 @@
 name: Update Video List
 
+# This workflow is used to update the video list in the index.html file.
+# It is triggered when a push is made to the videos directory.
+# It is also triggered manually via the workflow_dispatch event.  
+
 on:
   push:
     paths:
