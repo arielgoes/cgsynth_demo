@@ -462,49 +462,26 @@
                     console.error("Error loading video list:", error);
                     // Fallback to a default list if the file can't be loaded
                     return [
-                        "videos/scene_01_real.mp4",
-                        "videos/scene_01_interp.mp4",
-                        "videos/scene_02_real.mp4",
-                        "videos/scene_02_interp.mp4",
-                        "videos/scene_03_real.mp4",
-                        "videos/scene_03_interp.mp4",
-                        "videos/scene_04_real.mp4",
-                        "videos/scene_04_interp.mp4",
-                        "videos/scene_05_real.mp4",
-                        "videos/scene_05_interp.mp4",
-                        "videos/scene_06_real.mp4",
-                        "videos/scene_06_interp.mp4",
-                        "videos/scene_07_real.mp4",
-                        "videos/scene_07_interp.mp4"
+                        "videos/TEMP_TEST.mp4",
+                        "videos/interpolated_video_addWeighted.mp4",
+                        "videos/interpolated_video_film.mp4",
+                        "videos/original_video.mp4",
+                        "videos/original_video_1280_720.mp4",
+                        "videos/original_video_upsampled_from_1280_720_to_1920_1080.mp4"
                     ];
                 });
         }
         
         function createVideoPairs() {
-            // Group files by scene
-            const sceneGroups = {};
-            videoFilesCache.forEach(file => {
-                const sceneName = extractSceneName(file);
-                if (!sceneGroups[sceneName]) {
-                    sceneGroups[sceneName] = [];
-                }
-                sceneGroups[sceneName].push(file);
-            });
-            
-            // Create pairs from scene groups
+            // Create pairs from the video list
             const allPairs = [];
-            for (const sceneName in sceneGroups) {
-                const files = sceneGroups[sceneName];
-                if (files.length === 2) {
-                    const realFile = files.find(f => f.includes("_real"));
-                    const interpFile = files.find(f => f.includes("_interp"));
-                    if (realFile && interpFile) {
-                        allPairs.push({
-                            scene: sceneName,
-                            real: realFile,
-                            interp: interpFile
-                        });
-                    }
+            for (let i = 0; i < videoFilesCache.length; i += 2) {
+                if (i + 1 < videoFilesCache.length) {
+                    allPairs.push({
+                        scene: `Pair ${Math.floor(i/2) + 1}`,
+                        videoA: videoFilesCache[i],
+                        videoB: videoFilesCache[i + 1]
+                    });
                 }
             }
             
@@ -652,7 +629,7 @@
             }
             
             // Update progress indicator
-            progressIndicator.textContent = `Scene ${currentPairIndex + 1} of ${videoPairs.length}`;
+            progressIndicator.textContent = `Pair ${currentPairIndex + 1} of ${videoPairs.length}`;
             
             // Get current video pair
             const currentPair = videoPairs[currentPairIndex];
@@ -661,22 +638,19 @@
             sceneTitle.textContent = `Evaluate ${currentPair.scene}`;
             
             // Use the fixed global seed + current pair index to determine video placement
-            // This ensures consistent placement across all users but varies between pairs
             const pairSeed = FIXED_GLOBAL_SEED + currentPairIndex;
             const random = seededRandom(pairSeed);
-            const isARealVideo = random() >= 0.5;
+            const swapVideos = random() >= 0.5;
             
-            // Set video sources with fallback content
-            videoA.innerHTML = `<source src="${isARealVideo ? currentPair.real : currentPair.interp}" type="video/mp4">
+            // Set video sources with autoplay and loop attributes
+            videoA.innerHTML = `<source src="${swapVideos ? currentPair.videoB : currentPair.videoA}" type="video/mp4">
                                Your browser does not support the video tag or the file cannot be loaded.`;
-            videoB.innerHTML = `<source src="${isARealVideo ? currentPair.interp : currentPair.real}" type="video/mp4">
+            videoB.innerHTML = `<source src="${swapVideos ? currentPair.videoA : currentPair.videoB}" type="video/mp4">
                                Your browser does not support the video tag or the file cannot be loaded.`;
             
-            // Store which video is real for data collection
-            videoA.dataset.isReal = isARealVideo;
-            videoB.dataset.isReal = !isARealVideo;
-            videoA.dataset.filename = isARealVideo ? currentPair.real : currentPair.interp;
-            videoB.dataset.filename = isARealVideo ? currentPair.interp : currentPair.real;
+            // Store filenames for data collection
+            videoA.dataset.filename = swapVideos ? currentPair.videoB : currentPair.videoA;
+            videoB.dataset.filename = swapVideos ? currentPair.videoA : currentPair.videoB;
             
             // Reset ratings and comments
             resetEvaluation();
@@ -684,6 +658,31 @@
             // Load videos
             videoA.load();
             videoB.load();
+            
+            // Set video properties for synchronized playback
+            videoA.autoplay = true;
+            videoB.autoplay = true;
+            videoA.loop = true;
+            videoB.loop = true;
+            videoA.muted = true; // Muted by default to allow autoplay
+            videoB.muted = true;
+            
+            // Synchronize video playback
+            videoA.addEventListener('loadedmetadata', () => {
+                videoB.currentTime = videoA.currentTime;
+            });
+            
+            videoA.addEventListener('timeupdate', () => {
+                if (Math.abs(videoB.currentTime - videoA.currentTime) > 0.1) {
+                    videoB.currentTime = videoA.currentTime;
+                }
+            });
+            
+            videoB.addEventListener('timeupdate', () => {
+                if (Math.abs(videoA.currentTime - videoB.currentTime) > 0.1) {
+                    videoA.currentTime = videoB.currentTime;
+                }
+            });
         }
         
         function resetEvaluation() {
