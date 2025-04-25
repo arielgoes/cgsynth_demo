@@ -6,13 +6,17 @@ on:
       - 'videos/**'
   workflow_dispatch:
 
+# Sets permissions of the GITHUB_TOKEN to allow pushing changes
+permissions:
+  contents: write
+
 jobs:
   update-video-list:
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v3
-      
+        
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
