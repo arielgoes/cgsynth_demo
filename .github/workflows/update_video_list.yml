@@ -1,0 +1,30 @@
+name: Update Video List
+
+on:
+  push:
+    paths:
+      - 'videos/**'
+  workflow_dispatch:
+
+jobs:
+  update-video-list:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+        
+    - name: Generate video list
+      run: |
+        python generate_video_list.py
+        
+    - name: Commit changes if needed
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add video_list.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update video list" && git push) 

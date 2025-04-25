@@ -342,6 +342,9 @@
     </div>
 
     <script>
+        // Fixed global seed for randomization (you can change this to any number)
+        const FIXED_GLOBAL_SEED = 42; 
+        
         // Variables
         let userId = generateRandomUserId(10);
         let currentPairIndex = 0;
@@ -384,7 +387,8 @@
         const visualCuesOptions = document.getElementById("visualCuesOptions");
         
         // Google Sheet script URL (you'll need to replace this with your actual script URL)
-        const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZ_0XmN6_j9VFUUUuiECXEOCZtLLD-sFUTrFj-mw0XppVQlcWirXloBWu25BPSYk754Q/exec"; // Replace with your Web App URL
+
         
         // Display the generated user ID
         userIdDisplay.textContent = userId;
@@ -446,11 +450,18 @@
         }
         
         function fetchVideoFiles() {
-            // This is a simulated list of video files that would normally come from a server-side API
-            // In a real implementation, you would call an API endpoint to get the list of available video files
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve([
+            // Load the video list from the generated JSON file
+            return fetch('video_list.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load video list');
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error("Error loading video list:", error);
+                    // Fallback to a default list if the file can't be loaded
+                    return [
                         "videos/scene_01_real.mp4",
                         "videos/scene_01_interp.mp4",
                         "videos/scene_02_real.mp4",
@@ -465,9 +476,8 @@
                         "videos/scene_06_interp.mp4",
                         "videos/scene_07_real.mp4",
                         "videos/scene_07_interp.mp4"
-                    ]);
-                }, 1000);
-            });
+                    ];
+                });
         }
         
         function createVideoPairs() {
@@ -498,8 +508,8 @@
                 }
             }
             
-            // Use a seeded random selection to choose 5 pairs
-            videoPairs = selectRandomPairsWithSeed(allPairs, 5, userId);
+            // Use a fixed seed random selection to choose 5 pairs
+            videoPairs = selectRandomPairsWithSeed(allPairs, 5, FIXED_GLOBAL_SEED);
             
             console.log("Selected video pairs:", videoPairs);
         }
@@ -512,22 +522,12 @@
         
         // Seedable random number generator
         function seededRandom(seed) {
-            let state = hashString(seed);
+            let state = seed;
             
             return function() {
                 state = (state * 1664525 + 1013904223) % 4294967296;
                 return state / 4294967296;
             };
-        }
-        
-        function hashString(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                const char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32bit integer
-            }
-            return Math.abs(hash);
         }
         
         function selectRandomPairsWithSeed(pairs, count, seed) {
@@ -660,8 +660,10 @@
             // Set scene title
             sceneTitle.textContent = `Evaluate ${currentPair.scene}`;
             
-            // Generate a reproducible random choice for A/B placement based on userId and scene
-            const random = seededRandom(userId + currentPair.scene);
+            // Use the fixed global seed + current pair index to determine video placement
+            // This ensures consistent placement across all users but varies between pairs
+            const pairSeed = FIXED_GLOBAL_SEED + currentPairIndex;
+            const random = seededRandom(pairSeed);
             const isARealVideo = random() >= 0.5;
             
             // Set video sources with fallback content
@@ -764,21 +766,40 @@
             
             // Submit data to Google Sheets
             submitToGoogleSheets(resultData);
-            
-            // Move to next pair
-            currentPairIndex++;
-            loadCurrentPair();
         }
         
         function submitToGoogleSheets(data) {
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = "Submitting...";
+            
+            // Add a timestamp if not already present
+            if (!data.timestamp) {
+                data.timestamp = new Date().toISOString();
+            }
+            
             fetch(SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors', // Use no-cors mode
+                cache: 'no-cache',
                 body: JSON.stringify(data),
                 headers: {
                     'Content-Type': 'application/json'
                 }
             })
-            .catch(error => console.error('Error submitting data:', error));
+            .then(() => {
+                // With no-cors, we can't read the response, but we can assume success
+                // since the request was sent
+                currentPairIndex++;
+                loadCurrentPair();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("Failed to submit evaluation. Please try again or contact support.");
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.textContent = "Submit Evaluation";
+            });
         }
         
         function finishEvaluation() {
