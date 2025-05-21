@@ -1,1 +1,1 @@
-# CGReplay_website
+# CGSynth_website
