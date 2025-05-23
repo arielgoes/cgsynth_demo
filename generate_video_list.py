@@ -3,7 +3,7 @@ import json
 import sys
 import time
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone, UTC
 from pathlib import Path
 
 def get_video_files(directory):
@@ -43,8 +43,8 @@ def generate_video_list(directory):
     # Sort files alphabetically for consistency
     video_files.sort()
     
-    # Generate version information
-    timestamp = datetime.now().isoformat()
+    # Generate version information with UTC timestamps
+    timestamp = datetime.now(UTC).isoformat()  # Modern way to get UTC time
     version = f"1.0.{int(time.time())}"  # Simple versioning scheme
     files_hash = calculate_files_hash(video_files)
     
@@ -75,9 +75,16 @@ def main():
         with open('video_list.json', 'w') as f:
             json.dump(video_list_data, f, indent=2)
         
-        # Create a timestamped backup copy
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f'video_list_{timestamp}.json'
+        # Create a timestamped backup copy using UTC
+        utc_now = datetime.now(UTC)
+        timestamp = utc_now.strftime("%Y%m%d_%H%M%S")
+        # Format: video_list_YYYYMMDD_HHMMSS_UTC.json
+        backup_filename = f'video_list_{timestamp}_UTC.json'  # Explicitly mark as UTC
+        print(f"Current UTC time: {utc_now.isoformat()}")  # Debug output
+        
+        # Also create/update the main file that the frontend uses
+        with open('video_list.json', 'w') as f:
+            json.dump(video_list_data, f, indent=2)
         with open(backup_filename, 'w') as f:
             json.dump(video_list_data, f, indent=2)
             
