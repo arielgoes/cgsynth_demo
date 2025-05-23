@@ -540,6 +540,11 @@ const USER_SEED = hashStringToSeed(userId);
                 });
         }
         
+        // Global variable to store video list metadata
+        let videoListVersion = "unknown";
+        let videoListHash = "unknown";
+        let videoListTimestamp = "unknown";
+        
         function fetchVideoFiles() {
             // Load the video list from the generated JSON file
             return fetch('video_list.json')
@@ -548,6 +553,23 @@ const USER_SEED = hashStringToSeed(userId);
                         throw new Error('Failed to load video list');
                     }
                     return response.json();
+                })
+                .then(data => {
+                    // Handle new JSON format with version info
+                    if (data.files && Array.isArray(data.files)) {
+                        // New format with version info
+                        videoListVersion = data.version || "unknown";
+                        videoListHash = data.hash || "unknown";
+                        videoListTimestamp = data.generated_at || "unknown";
+                        console.log(`Loaded video list version ${videoListVersion}, hash ${videoListHash}`);
+                        return data.files;
+                    } else if (Array.isArray(data)) {
+                        // Old format (just array of files)
+                        console.log("Loaded video list (legacy format without version info)");
+                        return data;
+                    } else {
+                        throw new Error('Invalid video list format');
+                    }
                 })
                 .catch(error => {
                     console.error("Error loading video list:", error);
@@ -827,9 +849,9 @@ const USER_SEED = hashStringToSeed(userId);
         function submitRatings() {
             // Get current scene information
             const currentPair = videoPairs[currentPairIndex];
-            
-            // Collect data
-            const resultData = {
+            // Prepare data for submission
+            const data = {
+                timestamp: new Date().toISOString(),
                 user_id: userId,
                 scene: currentPair.scene,
                 video_A_filename: videoA.dataset.filename,
@@ -838,22 +860,24 @@ const USER_SEED = hashStringToSeed(userId);
                 B_score: ratingB,
                 A_comment: commentA.value.trim() || "N/A",
                 B_comment: commentB.value.trim() || "N/A",
-                video_A_is_real: videoA.dataset.isReal === "true",
-                video_B_is_real: videoB.dataset.isReal === "true",
-                // Additional question responses
-                which_video_real: realVideoSelection,
-                gameplay_affected: gameplayAffectedSelection,
-                inform_preference: informPreferenceSelection,
-                visual_cues: visualCuesSelections.join(", "),
-                other_cues: otherCuesText || "N/A",
-                timestamp: new Date().toISOString()
+                video_A_is_real: "FALSE",
+                video_B_is_real: "FALSE",
+                which_video_real: realVideoSelection || "none",
+                gameplay_affected: gameplayAffectedSelection || "none",
+                inform_preference: informPreferenceSelection || "none",
+                visual_cues: visualCuesSelections.join(",") || "none",
+                other_cues: otherCues.value.trim() || "N/A",
+                // Add video list version information for reproducibility
+                video_list_version: videoListVersion,
+                video_list_hash: videoListHash,
+                video_list_timestamp: videoListTimestamp
             };
             
             // Add to results array
-            resultsData.push(resultData);
+            resultsData.push(data);
             
             // Submit data to Google Sheets
-            submitToGoogleSheets(resultData);
+            submitToGoogleSheets(data);
         }
         
         function submitToGoogleSheets(data) {

@@ -37,7 +37,11 @@ function doPost(e) {
         "Gameplay Affected",
         "Inform Preference",
         "Visual Cues",
-        "Other Cues"
+        "Other Cues",
+        // Add video list version information for reproducibility
+        "Video List Version",
+        "Video List Hash",
+        "Video List Timestamp"
       ];
       sheet.appendRow(headers);
     }
@@ -59,7 +63,11 @@ function doPost(e) {
       data.gameplay_affected,
       data.inform_preference,
       data.visual_cues,
-      data.other_cues
+      data.other_cues,
+      // Add video list version info for reproducibility
+      data.video_list_version || "unknown",
+      data.video_list_hash || "unknown",
+      data.video_list_timestamp || "unknown"
     ];
     sheet.appendRow(row);
     
