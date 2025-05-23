@@ -425,10 +425,19 @@
 
     <script>
         // Fixed global seed for randomization (you can change this to any number)
-        const FIXED_GLOBAL_SEED = 42; 
-        
-        // Variables
-        let userId = generateRandomUserId(10);
+        // --- Deterministic seed based on user ID for reproducible randomization ---
+// Hash function to convert user ID string to a numeric seed
+function hashStringToSeed(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    }
+    return Math.abs(hash) % 4294967296; // 32-bit unsigned int
+}
+
+// Variables
+let userId = generateRandomUserId(10); // In production, use persistent ID per user
+const USER_SEED = hashStringToSeed(userId);
         let currentPairIndex = 0;
         let ratingA = 0;
         let ratingB = 0;
@@ -555,22 +564,20 @@
         }
         
         function createVideoPairs() {
-            // Create pairs from the video list
+            // Create all possible unique pairs (A != B, unordered)
             const allPairs = [];
-            for (let i = 0; i < videoFilesCache.length; i += 2) {
-                if (i + 1 < videoFilesCache.length) {
+            for (let i = 0; i < videoFilesCache.length; i++) {
+                for (let j = i + 1; j < videoFilesCache.length; j++) {
                     allPairs.push({
-                        scene: `Pair ${Math.floor(i/2) + 1}`,
+                        scene: `Pair ${allPairs.length + 1}`,
                         videoA: videoFilesCache[i],
-                        videoB: videoFilesCache[i + 1]
+                        videoB: videoFilesCache[j]
                     });
                 }
             }
-            
-            // Use a fixed seed random selection to choose 5 pairs
-            videoPairs = selectRandomPairsWithSeed(allPairs, 5, FIXED_GLOBAL_SEED);
-            
-            console.log("Selected video pairs:", videoPairs);
+            // Shuffle/select using the user-specific seed for reproducibility
+            videoPairs = selectRandomPairsWithSeed(allPairs, 5, USER_SEED);
+            console.log("User ID:", userId, "Seed:", USER_SEED, "Selected video pairs:", videoPairs);
         }
         
         function extractSceneName(filename) {
@@ -719,8 +726,8 @@
             // Set scene title
             sceneTitle.textContent = `Evaluate ${currentPair.scene}`;
             
-            // Use the fixed global seed + current pair index to determine video placement
-            const pairSeed = FIXED_GLOBAL_SEED + currentPairIndex;
+            // Use the user-specific seed + current pair index to determine video placement
+            const pairSeed = USER_SEED + currentPairIndex;
             const random = seededRandom(pairSeed);
             const swapVideos = random() >= 0.5;
             
