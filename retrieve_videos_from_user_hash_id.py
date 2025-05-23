@@ -1,4 +1,5 @@
 import itertools
+import argparse
 
 def hash_string_to_seed(s):
     hash_ = 5381
@@ -34,16 +35,22 @@ videos = [
     "videos/video_with_degrad_mk11_1080p.mp4"
 ]
 
-user_id = "5s7jpj0fUg"
-user_seed = hash_string_to_seed(user_id)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Retrieve video pairs for a given user ID.")
+    parser.add_argument("user_id", type=str, help="User ID to reproduce video pairs for")
+    args = parser.parse_args()
 
-# All unique unordered pairs (A != B)
-all_pairs = []
-for i in range(len(videos)):
-    for j in range(i + 1, len(videos)):
-        all_pairs.append((videos[i], videos[j]))
+    user_id = args.user_id
+    user_seed = hash_string_to_seed(user_id)
 
-selected_pairs = select_random_pairs_with_seed(all_pairs, 5, user_seed)
+    # All unique unordered pairs (A != B)
+    all_pairs = []
+    for i in range(len(videos)):
+        for j in range(i + 1, len(videos)):
+            all_pairs.append((videos[i], videos[j]))
 
-for idx, (a, b) in enumerate(selected_pairs, 1):
-    print(f"Pair {idx}: {a} vs {b}")
+    selected_pairs = select_random_pairs_with_seed(all_pairs, 5, user_seed)
+
+    print(f"User ID: {user_id}\n")
+    for idx, (a, b) in enumerate(selected_pairs, 1):
+        print(f"Pair {idx}: {a} vs {b}")
