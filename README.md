@@ -6,7 +6,7 @@ A web-based tool for conducting video quality evaluation studies, specifically d
 
 This project provides a complete solution for conducting video quality evaluation studies where participants compare pairs of videos and rate their quality. The system ensures consistent and reproducible results by using deterministic algorithms for video pair selection based on user IDs.
 
-The project also includes tools for analyzing the collected data, extracting insights from the Google Sheet responses, and generating visualizations to compare when users correctly identified synthetic videos versus when they didn't.
+The project also includes tools for analyzing the collected data, extracting insights from the Google Sheet responses, and generating visualizations to compare when users correctly identified synthetic videos versus when they didn't. The analysis pipeline can be run with a single command, making it easy to generate insights from the collected data.
 
 ## Features
 
@@ -16,6 +16,9 @@ The project also includes tools for analyzing the collected data, extracting ins
 - **Data Collection**: Records user ratings and additional feedback
 - **Offline-First**: Works without an internet connection after initial load
 - **Version Control**: Tracks video list versions and hashes for data integrity
+- **Data Analysis**: Comprehensive analysis tools with visualization generation
+- **Reproducibility**: Ability to retrieve exact video pairs shown to specific users
+- **Sample Data Generation**: Tools to generate sample data for testing without accessing the Google Sheet
 
 ## Project Structure
 
@@ -29,10 +32,15 @@ The project also includes tools for analyzing the collected data, extracting ins
 
 ### Analysis Tools
 - `download_qoe_data.py` - Downloads the data from the Google Sheet and saves it as a CSV file
-- `analyze_qoe_data.py` - Analyzes the data and generates visualizations
+- `analyze_qoe_data.py` - Analyzes the data and generates visualizations for accuracy metrics
 - `generate_sample_data.py` - Generates sample data for testing the analysis without accessing the Google Sheet
 - `run_analysis.sh` - Shell script to run the entire analysis pipeline in one command
 - `requirements.txt` - List of Python package dependencies for the analysis tools
+- `visualizations/` - Directory containing generated visualization outputs:
+  - `overall_accuracy.png` - Bar chart showing the proportion of correct vs. incorrect guesses
+  - `accuracy_by_type.png` - Bar chart showing the accuracy for different video type combinations
+  - `confusion_matrix.png` - Heatmap showing the relationship between reality and user guesses
+  - `user_accuracy_distribution.png` - Histogram showing the distribution of accuracy across users
 
 ## Getting Started
 
@@ -90,6 +98,20 @@ python3 retrieve_videos_from_user_hash_id.py USER_ID
 ```
 
 This will output the list of video pairs that were shown to that user, allowing for result verification and analysis.
+
+Additional options for the retrieval script:
+```bash
+# Output in CSV format
+python3 retrieve_videos_from_user_hash_id.py USER_ID --csv
+
+# Save output to a file
+python3 retrieve_videos_from_user_hash_id.py USER_ID --save user_pairs.csv
+
+# Generate pairs algorithmically instead of using CSV data
+python3 retrieve_videos_from_user_hash_id.py USER_ID --generate
+```
+
+The script first attempts to load pairs directly from the QoE data CSV file. If no data is found or the `--generate` flag is used, it falls back to algorithmic generation using the same deterministic algorithm as the frontend.
 
 ## Data Collection
 
@@ -211,4 +233,10 @@ The analysis script:
 
 2. Determines the "reality" for each video pair and compares it with the user's guess
 
-3. Calculates various metrics including overall accuracy, accuracy by video type, and user accuracy distribution
+3. Calculates various metrics including:
+   - Overall accuracy (proportion of correct identifications)
+   - Accuracy by video type (how well users identify different combinations of real/synthetic videos)
+   - User accuracy distribution (histogram showing how accuracy varies across users)
+   - Confusion matrix (relationship between actual reality and user guesses)
+
+4. Generates visualizations to help interpret the results and identify patterns in user perception
