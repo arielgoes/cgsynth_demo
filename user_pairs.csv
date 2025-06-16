@@ -1,0 +1,3 @@
+Scene,VideoA,VideoB
+Pair 27,videos/video_with_degrad_mk11_1080p.mp4,videos/original_video_1280_720.mp4
+Pair 6,videos/original_video_upsampled_from_1280_720_to_1920_1080.mp4,videos/TEMP_TEST.mp4

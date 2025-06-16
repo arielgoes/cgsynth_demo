@@ -241,9 +241,11 @@ def generate_visualizations(results, output_dir='.'):
     plt.figure(figsize=(10, 6))
     plt.bar(['Correct', 'Incorrect'], 
             [results['overall_accuracy'], 1 - results['overall_accuracy']],
-            color=['#2ecc71', '#e74c3c'])
+            color=['#2ecc71', '#e74c3c'],
+            label=['Correct Identifications', 'Incorrect Identifications'])
     plt.title('Overall Accuracy in Identifying Real vs. Synthetic Videos', fontsize=16)
-    plt.ylabel('Proportion', fontsize=14)
+    plt.ylabel('Proportion of Responses', fontsize=14)
+    plt.xlabel('User Response Accuracy', fontsize=14)
     plt.ylim(0, 1)
     plt.text(0, results['overall_accuracy'] + 0.02, 
              f"{results['overall_accuracy']:.2%}", 
@@ -251,6 +253,14 @@ def generate_visualizations(results, output_dir='.'):
     plt.text(1, (1 - results['overall_accuracy']) + 0.02, 
              f"{1 - results['overall_accuracy']:.2%}", 
              ha='center', fontsize=12)
+    
+    # Add a legend to explain the color coding
+    handles = [
+        plt.Rectangle((0,0),1,1, color='#2ecc71'),
+        plt.Rectangle((0,0),1,1, color='#e74c3c')
+    ]
+    plt.legend(handles, ['Correct Identifications', 'Incorrect Identifications'], 
+               title='Response Accuracy', loc='upper right')
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'overall_accuracy.png'), dpi=300)
     
@@ -264,9 +274,12 @@ def generate_visualizations(results, output_dir='.'):
     video_types = [video_types[i] for i in sorted_indices]
     accuracies = [accuracies[i] for i in sorted_indices]
     
-    bars = plt.bar(video_types, accuracies, color='#3498db')
-    plt.title('Accuracy by Video Type', fontsize=16)
-    plt.ylabel('Accuracy', fontsize=14)
+    # Add a more descriptive title and labels
+    bars = plt.bar(video_types, accuracies, color='#3498db', 
+                  label='Accuracy Rate')
+    plt.title('Accuracy by Video Type: User Ability to Identify Real vs. Synthetic Videos', fontsize=16)
+    plt.ylabel('Accuracy Rate', fontsize=14)
+    plt.xlabel('Video Scenario', fontsize=14)
     plt.ylim(0, 1)
     plt.xticks(rotation=45, ha='right')
     
@@ -277,28 +290,42 @@ def generate_visualizations(results, output_dir='.'):
                  f"{accuracies[i]:.2%}", 
                  ha='center', fontsize=12)
     
+    # Add a legend to explain the bars
+    plt.legend(loc='lower left')
+    
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'accuracy_by_type.png'), dpi=300)
     
     # 3. Confusion matrix heatmap
     plt.figure(figsize=(10, 8))
     sns.heatmap(results['confusion_matrix'], annot=True, cmap='Blues', fmt='.2%',
-                cbar_kws={'label': 'Proportion'})
-    plt.title('Confusion Matrix: Reality vs. User Guess', fontsize=16)
-    plt.ylabel('Reality', fontsize=14)
-    plt.xlabel('User Guess', fontsize=14)
+                cbar_kws={'label': 'Proportion of Responses'})
+    plt.title('Confusion Matrix: Actual Video Reality vs. User Guess', fontsize=16)
+    plt.ylabel('Actual Reality (Ground Truth)', fontsize=14)
+    plt.xlabel('User Guess (Perceived Reality)', fontsize=14)
+    
+    # Add a text annotation
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'confusion_matrix.png'), dpi=300)
     
     # 4. Distribution of user accuracy
     plt.figure(figsize=(10, 6))
-    sns.histplot(results['accuracy_by_user'], bins=10, kde=True, color='#9b59b6')
+    # Create the histogram with KDE and explicitly label the KDE curve
+    ax = sns.histplot(results['accuracy_by_user'], bins=10, kde=True, color='#9b59b6')
+    # Get the line objects from the axes
+    lines = ax.get_lines()
+    # The first line should be the KDE curve
+    if lines:
+        # Set the label for the KDE curve
+        lines[0].set_label('Density Estimation (KDE)')
+    
     plt.title('Distribution of User Accuracy', fontsize=16)
     plt.xlabel('Accuracy', fontsize=14)
     plt.ylabel('Number of Users', fontsize=14)
     plt.axvline(results['overall_accuracy'], color='red', linestyle='--', 
                 label=f'Overall Accuracy: {results["overall_accuracy"]:.2%}')
-    plt.legend()
+    # Add a more descriptive legend that explains all elements
+    plt.legend(title='Legend', loc='best')
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'user_accuracy_distribution.png'), dpi=300)
     

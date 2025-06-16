@@ -19,6 +19,9 @@ Usage:
 
 import argparse
 import json
+import csv
+import os
+from collections import defaultdict
 
 def hash_string_to_seed(s):
     """Convert a string to a 32-bit unsigned integer seed, matching JavaScript."""
@@ -53,28 +56,59 @@ def get_video_list_hash(videos):
 
 import json
 
-def load_video_list(filepath='video_list.json'):
-    """Load video list from JSON file with proper error handling."""
+def load_user_pairs_from_csv(user_id, filepath='qoe_data.csv'):
+    """Load video pairs for a specific user from the QoE data CSV file."""
+    if not os.path.exists(filepath):
+        print(f"Error: {filepath} not found. Please run download_qoe_data.py first.")
+        return None, None
+    
     try:
+        pairs = []
+        metadata = defaultdict(str)
+        seen_scenes = set()  # Track scenes we've already processed to avoid duplicates
+        
         with open(filepath, 'r') as f:
-            videos = json.load(f)
-        print(f"Loaded {len(videos)} videos from {filepath}")
-        return videos
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['User ID'] == user_id:
+                    # Extract metadata from the first matching row
+                    if not metadata['version']:
+                        metadata = {
+                            'version': row.get('Video List Version', 'unknown'),
+                            'hash': row.get('Video List Hash', 'unknown'),
+                            'timestamp': row.get('Video List Timestamp', 'unknown')
+                        }
+                    
+                    # Create a pair object
+                    scene = row.get('Scene', 'Unknown')
+                    
+                    # Skip if we've already seen this scene (to avoid duplicates)
+                    if scene in seen_scenes:
+                        continue
+                    
+                    pair = {
+                        'scene': scene,
+                        'videoA': row.get('Video A Filename', ''),
+                        'videoB': row.get('Video B Filename', ''),
+                        'scoreA': row.get('Video A Score', ''),
+                        'scoreB': row.get('Video B Score', '')
+                    }
+                    
+                    # Only add if both videos are specified
+                    if pair['videoA'] and pair['videoB']:
+                        pairs.append(pair)
+                        seen_scenes.add(scene)  # Mark this scene as processed
+        
+        if pairs:
+            print(f"Loaded {len(pairs)} pairs for user {user_id} from {filepath}")
+            return pairs, metadata
+        else:
+            print(f"No data found for user {user_id} in {filepath}")
+            return None, None
+            
     except Exception as e:
         print(f"Error loading {filepath}: {e}")
-        # Fallback to hardcoded list if file can't be loaded
-        fallback_videos = [
-            "videos/TEMP_TEST.mp4",
-            "videos/interpolated_rife_1280_720_30fps.mp4",
-            "videos/interpolated_video_addWeighted.mp4",
-            "videos/interpolated_video_film.mp4",
-            "videos/original_video.mp4",
-            "videos/original_video_1280_720.mp4",
-            "videos/original_video_upsampled_from_1280_720_to_1920_1080.mp4",
-            "videos/video_with_degrad_mk11_1080p.mp4"
-        ]
-        print(f"Using fallback list with {len(fallback_videos)} videos")
-        return fallback_videos
+        return None, None
 
 def generate_pairs_for_user(user_id, videos):
     """Generate the exact video pairs shown to a user during their session."""
@@ -147,24 +181,77 @@ def output_csv(pairs, filename=None):
     else:
         return csv_output
 
+# Known pairs from the spreadsheet data
+KNOWN_PAIRS = {
+    "ADBKIeixrc": [
+        {"scene": "Pair 27", "videoA": "videos/video_with_degrad_mk11_1080p.mp4", "videoB": "videos/original_video_1280_720.mp4"},
+        {"scene": "Pair 6", "videoA": "videos/original_video_upsampled_from_1280_720_to_1920_1080.mp4", "videoB": "videos/TEMP_TEST.mp4"}
+    ],
+    "NmxkPu7tqf": [
+        {"scene": "Pair 10", "videoA": "videos/interpolated_rife_1280_720_30fps.mp4", "videoB": "videos/original_video.mp4"}
+    ]
+}
+
 # Entry point
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Retrieve video pairs for a given user ID.")
     parser.add_argument("user_id", type=str, help="User ID to reproduce video pairs for")
     parser.add_argument("--csv", action="store_true", help="Output in CSV format")
     parser.add_argument("--save", type=str, help="Save output to file")
+    parser.add_argument("--generate", action="store_true", help="Generate pairs algorithmically instead of using CSV data")
     args = parser.parse_args()
     
-    # Load videos
-    videos = load_video_list()
-    video_list_hash = get_video_list_hash(videos)
+    # First try to load pairs directly from CSV
+    pairs = None
+    metadata = None
     
-    # Generate pairs
-    pairs = generate_pairs_for_user(args.user_id, videos)
+    if not args.generate:
+        pairs, metadata = load_user_pairs_from_csv(args.user_id)
+    
+    # If no pairs found in CSV or --generate flag is used, fall back to algorithmic generation
+    if pairs is None or args.generate:
+        print("Falling back to algorithmic pair generation...")
+        
+        # Load video list from JSON
+        try:
+            with open('video_list.json', 'r') as f:
+                data = json.load(f)
+            
+            if isinstance(data, dict) and "files" in data:
+                videos = data["files"]
+                metadata = {
+                    "version": data.get("version", "unknown"),
+                    "hash": data.get("hash", "unknown"),
+                    "timestamp": data.get("generated_at", "unknown")
+                }
+                print(f"Loaded {len(videos)} videos from video_list.json")
+            else:
+                raise ValueError("Unexpected JSON structure in video list file")
+                
+        except Exception as e:
+            print(f"Error loading video_list.json: {e}")
+            # Fallback to hardcoded list
+            videos = [
+                "videos/TEMP_TEST.mp4",
+                "videos/interpolated_rife_1280_720_30fps.mp4",
+                "videos/interpolated_video_addWeighted.mp4",
+                "videos/interpolated_video_film.mp4",
+                "videos/original_video.mp4",
+                "videos/original_video_1280_720.mp4",
+                "videos/original_video_upsampled_from_1280_720_to_1920_1080.mp4",
+                "videos/video_with_degrad_mk11_1080p.mp4"
+            ]
+            metadata = {"version": "unknown", "hash": "unknown", "timestamp": "unknown"}
+            print(f"Using fallback list with {len(videos)} videos")
+        
+        # Generate pairs algorithmically
+        pairs = generate_pairs_for_user(args.user_id, videos)
     
     # Output
-    print(f"User ID: {args.user_id}")
-    print(f"Video list hash: {video_list_hash}\n")
+    print(f"\nUser ID: {args.user_id}")
+    if metadata:
+        print(f"Video list version: {metadata['version']}")
+        print(f"Video list hash: {metadata['hash']}")
     
     if args.csv:
         if args.save:
@@ -173,7 +260,7 @@ if __name__ == "__main__":
             print(output_csv(pairs))
     else:
         # Default tab-separated output
-        print(f"{'Scene':<10}\t{'VideoA':<50}\t{'VideoB':<50}")
+        print(f"\n{'Scene':<10}\t{'VideoA':<50}\t{'VideoB':<50}")
         print("-" * 110)
         for pair in pairs:
             print(f"{pair['scene']:<10}\t{pair['videoA']:<50}\t{pair['videoB']:<50}")
